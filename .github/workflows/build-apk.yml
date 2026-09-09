@@ -21,7 +21,11 @@ jobs:
           channel: stable
 
       - name: Create Android project
-        run: flutter create --platforms=android .
+        run: flutter create .
+
+      - name: Update Kotlin version
+        run: |
+          sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "2.3.20"/' android/settings.gradle
 
       - name: Get dependencies
         run: flutter pub get
