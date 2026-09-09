@@ -15,7 +15,7 @@ dependencies:
   cloud_firestore: ^6.0.2
   firebase_storage: ^13.0.2
   firebase_messaging: ^16.0.1
-  livekit_client: ^2.12.0
+  livekit_client: ^2.6.4
 
 dev_dependencies:
   flutter_test:
@@ -23,4 +23,4 @@ dev_dependencies:
   flutter_lints: ^3.0.0
 
 flutter:
-  uses-material-design: true
+  uses-material-design: 
