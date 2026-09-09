@@ -1,0 +1,21 @@
+ADDAVERSE ONLINE SETUP
+
+flutter pub get
+
+Firebase:
+  firebase login
+  dart pub global activate flutterfire_cli
+  flutterfire configure
+
+Then enable Firebase Auth/Firestore/Storage/FCM in Firebase Console.
+
+LiveKit:
+  Create a LiveKit Cloud project OR self-host LiveKit.
+  Create a secure server endpoint that returns a short-lived room token.
+  Do not ship the LiveKit API secret in the Flutter app.
+
+Run:
+  flutter run --dart-define=LIVEKIT_URL=wss://YOUR_LIVEKIT_HOST --dart-define=LIVEKIT_TOKEN_ENDPOINT=https://YOUR_TOKEN_ENDPOINT
+
+Android:
+  Test microphone permission on a real device.
