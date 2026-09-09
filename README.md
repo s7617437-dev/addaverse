@@ -1,25 +1,36 @@
-# VoiceConnect
+name: Build APK
 
-A starter Android voice-party app UI built with Kotlin + Jetpack Compose.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
-## Included
-- Party/Home screen
-- Featured voice-party banner
-- Ranking cards
-- Prize pool
-- Country filters
-- Live room cards
-- Games section
-- Bottom navigation
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-## Next production steps
-1. Node.js API + PostgreSQL
-2. JWT authentication
-3. LiveKit token endpoint
-4. LiveKit Android SDK
-5. Create/join room APIs
-6. Real-time room chat
-7. Gifts/coins/ranking
-8. Admin panel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-The project intentionally uses original placeholder visuals instead of copying another app's copyrighted assets.
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.0'
+          channel: stable
+
+      - name: Create Android project
+        run: flutter create .
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: addaverse-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
