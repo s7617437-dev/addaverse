@@ -25,7 +25,14 @@ jobs:
 
       - name: Update Kotlin version
         run: |
-          sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "2.3.20"/' android/settings.gradle
+          if [ -f android/settings.gradle.kts ]; then
+            sed -i 's/id("org.jetbrains.kotlin.android") version "[^"]*"/id("org.jetbrains.kotlin.android") version "2.3.20"/' android/settings.gradle.kts
+          elif [ -f android/settings.gradle ]; then
+            sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.3.20"/' android/settings.gradle
+          else
+            echo "Kotlin settings file not found"
+            exit 1
+          fi
 
       - name: Get dependencies
         run: flutter pub get
