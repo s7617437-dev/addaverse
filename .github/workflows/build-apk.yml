@@ -24,35 +24,31 @@ jobs:
         run: |
           flutter create --platforms=android .
 
-      - name: Configure Kotlin and Java
+      - name: Configure Kotlin
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.3.20"/' android/settings.gradle
 
-          settings = Path("android/settings.gradle")
-          text = settings.read_text()
+      - name: Configure JVM
+        run: |
+          sed -i '/kotlinOptions[[:space:]]*{/,+2d' android/app/build.gradle
 
-          text = re.sub(
-              r'(org\.jetbrains\.kotlin\.android["\']?\s+version\s+["\'])[^"\']+(["\'])',
-              r'\g<1>2.3.20\g<2>',
-              text
-          )
+          cat >> android/app/build.gradle <<'EOF'
 
-          settings.write_text(text)
+          kotlin {
+              compilerOptions {
+                  jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+              }
+          }
+          EOF
 
-          app = Path("android/app/build.gradle")
-          text = app.read_text()
+      - name: Get dependencies
+        run: flutter pub get
 
-          text = text.replace(
-              'JavaVersion.VERSION_11',
-              'JavaVersion.VERSION_17'
-          )
+      - name: Build APK
+        run: flutter build apk --debug
 
-          text = re.sub(
-              r'kotlinOptions\s*\{\s*jvmTarget\s*=\s*JavaVersion\.VERSION_17\.toString\s*\}',
-              '''kotlin {
-                  compilerOptions {
-                      jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-                  }
-             
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
