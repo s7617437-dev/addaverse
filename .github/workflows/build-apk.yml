@@ -26,6 +26,27 @@ jobs:
             flutter create --platforms=android .
           fi
 
+      - name: Upgrade Kotlin
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          file = Path("android/settings.gradle")
+          text = file.read_text()
+
+          text = re.sub(
+              r'(org\.jetbrains\.kotlin\.android["\']?\s*version\s*["\'])[^"\']+(["\'])',
+              r'\g<1>2.3.20\g<2>',
+              text
+          )
+
+          file.write_text(text)
+          print("Kotlin version updated to 2.3.20")
+          PY
+
+          grep "org.jetbrains.kotlin.android" android/settings.gradle || true
+
       - name: Get dependencies
         run: flutter pub get
 
