@@ -28,8 +28,20 @@ jobs:
           cache: true
 
       # পুরোনো Android project সরিয়ে নতুন Flutter Android project তৈরি
-      - name:
-      - name: Clean
+      - name: Recreate Android Project
+        run: |
+          rm -rf android
+          flutter create \
+            --platforms=android \
+            --android-language kotlin \
+            --org com.avyra.app \
+            .
+
+      - name: Pub Get
+        run: |
+          flutter pub get
+
+      - name: Flutter Clean
         run: |
           flutter clean
           flutter pub get
