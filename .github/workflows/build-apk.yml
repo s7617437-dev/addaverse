@@ -43,59 +43,61 @@ jobs:
           from pathlib import Path
           import re
 
-          candidates = [
+          settings_files = [
               Path("android/settings.gradle"),
               Path("android/settings.gradle.kts")
           ]
 
-          settings = next((p for p in candidates if p.exists()), None)
+          settings = None
+
+          for f in settings_files:
+              if f.exists():
+                  settings = f
+                  break
 
           if settings is None:
-              print("ERROR: settings.gradle or settings.gradle.kts not found")
+              print("ERROR: Android settings file not found")
               exit(1)
 
-          print("Using settings file:", settings)
+          print("Using:", settings)
 
           text = settings.read_text()
 
-          pattern = (
-              r'(id\s+["\']org\.jetbrains\.kotlin\.android'
-              r'["\']\s+version\s+["\'])'
-              r'[^"\']+'
-              r'(["\'])'
-          )
-
-          match = re.search(pattern, text)
-
-          if not match:
-              print("ERROR: Kotlin Gradle Plugin entry not found")
-              print(text)
-              exit(1)
-
-          print("Old Kotlin plugin:")
-          print(match.group(0))
-
-          text = re.sub(
-              pattern,
+          # Kotlin DSL: settings.gradle.kts
+          text2 = re.sub(
+              r'(id\(["\']org\.jetbrains\.kotlin\.android["\']\)\s+version\s+["\'])[^"\']+(["\'])',
               r'\g<1>2.3.20\g<2>',
               text
           )
 
-          settings.write_text(text)
+          # Groovy DSL: settings.gradle
+          text2 = re.sub(
+              r'(id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'])[^"\']+(["\'])',
+              r'\g<1>2.3.20\g<2>',
+              text2
+          )
 
-          print("Kotlin Gradle Plugin updated to 2.3.20")
+          if text2 == text:
+              print("ERROR: Kotlin plugin entry was not changed.")
+              print("===== SETTINGS FILE =====")
+              print(text)
+              exit(1)
+
+          settings.write_text(text2)
+
+          print("SUCCESS: Kotlin Gradle Plugin set to 2.3.20")
           PY
 
       - name: Verify Kotlin Version
         run: |
-          echo "===== Kotlin Gradle Plugin ====="
-
-          if [ -f android/settings.gradle ]; then
-            grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
-          fi
+          echo "===== KOTLIN VERSION ====="
 
           if [ -f android/settings.gradle.kts ]; then
-            grep -n "org.jetbrains.kotlin.android" android/settings.gradle.kts || true
+            grep -n "org.jetbrains.kotlin.android" android/settings.gradle.kts
+          fi
+
+          if [ -f android/settings.gradle ]; then
+            grep -n "org.jetbrains.kotlin.android" android/settings.gradle
           fi
 
       - name: Flutter Pub Get
