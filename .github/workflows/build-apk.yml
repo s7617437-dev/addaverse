@@ -37,16 +37,51 @@ jobs:
             --org com.avyra.app \
             .
 
-      - name: Check Android Gradle Configuration
+      - name: Upgrade Kotlin Gradle Plugin
         run: |
-          echo "===== settings.gradle ====="
-          cat android/settings.gradle || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
 
-          echo "===== settings.gradle.kts ====="
-          cat android/settings.gradle.kts || true
+          p = Path("android/settings.gradle")
 
-          echo "===== gradle.properties ====="
-          cat android/gradle.properties || true
+          if not p.exists():
+              print("ERROR: android/settings.gradle not found")
+              exit(1)
+
+          s = p.read_text()
+
+          old = re.search(
+              r'id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'][^"\']+["\']',
+              s
+          )
+
+          if old:
+              print("Old Kotlin plugin:")
+              print(old.group(0))
+
+              s = re.sub(
+                  r'(id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'])[^"\']+(["\'])',
+                  r'\g<1>2.1.20\g<2>',
+                  s
+              )
+
+              p.write_text(s)
+
+              print("Updated Kotlin plugin to 2.1.20")
+          else:
+              print("ERROR: Kotlin plugin entry not found")
+              print(s)
+              exit(1)
+          PY
+
+      - name: Show Android Configuration
+        run: |
+          echo "===== Kotlin Plugin ====="
+          grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
+
+          echo "===== Android Settings ====="
+          cat android/settings.gradle
 
       - name: Flutter Pub Get
         run: |
@@ -59,7 +94,7 @@ jobs:
 
       - name: Build APK
         run: |
-          flutter build apk --debug --verbose
+          flutter build apk --debug
 
       - name: Upload APK
         if: success()
@@ -67,4 +102,7 @@ jobs:
         with:
           name: app-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
+          if-no-files-found: errorOld Kotlin plugin:
+id "org.jetbrains.kotlin.android" version "2.1.0"
+
+Updated Kotlin plugin to 2.1.20Build APK
