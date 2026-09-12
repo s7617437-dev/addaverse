@@ -20,11 +20,9 @@ jobs:
           flutter-version: '3.35.0'
           channel: stable
 
-      - name: Create Android project if missing
+      - name: Create Android project
         run: |
-          if [ ! -d "android" ]; then
-            flutter create --platforms=android .
-          fi
+          flutter create --platforms=android .
 
       - name: Upgrade Kotlin
         run: |
@@ -36,16 +34,16 @@ jobs:
           text = file.read_text()
 
           text = re.sub(
-              r'(org\.jetbrains\.kotlin\.android["\']?\s*version\s*["\'])[^"\']+(["\'])',
+              r'(id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'])[^"\']+(["\'])',
               r'\g<1>2.3.20\g<2>',
               text
           )
 
           file.write_text(text)
-          print("Kotlin version updated to 2.3.20")
+          print("Kotlin version set to 2.3.20")
           PY
 
-          grep "org.jetbrains.kotlin.android" android/settings.gradle || true
+          grep "org.jetbrains.kotlin.android" android/settings.gradle
 
       - name: Get dependencies
         run: flutter pub get
