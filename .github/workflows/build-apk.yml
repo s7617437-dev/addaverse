@@ -29,56 +29,55 @@ jobs:
         run: |
           APP_GRADLE="android/app/build.gradle.kts"
 
-          echo "Fixing Kotlin JVM target..."
+          echo "Checking: $APP_GRADLE"
 
           if [ ! -f "$APP_GRADLE" ]; then
-            echo "ERROR: $APP_GRADLE not found"
+            echo "ERROR: build.gradle.kts not found"
             exit 1
           fi
 
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
-          file = Path("android/app/build.gradle.kts")
-          text = file.read_text()
+          path = Path("android/app/build.gradle.kts")
+          text = path.read_text()
 
-          old = """kotlinOptions {
-              jvmTarget = JavaVersion.VERSION_11.toString()
-          }"""
+          # Remove old kotlinOptions block
+          text = re.sub(
+              r'(?ms)^\s*kotlinOptions\s*\{.*?^\s*\}',
+              '',
+              text
+          )
 
-          new = """compilerOptions {
-              jvmTarget.set(
-                  org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
-              )
-          }"""
+          # Remove an incorrectly inserted compilerOptions block
+          text = re.sub(
+              r'(?ms)^\s*compilerOptions\s*\{.*?^\s*\}',
+              '',
+              text
+          )
 
-          if old in text:
-              text = text.replace(old, new)
-              file.write_text(text)
-              print("Kotlin JVM target fixed successfully.")
-          else:
-              print("Old kotlinOptions block not found.")
-              print("Checking file for kotlinOptions...")
-
-              if "kotlinOptions" in text:
-                  import re
-
-                  text = re.sub(
-                      r'kotlinOptions\s*\{[^}]*jvmTarget\s*=\s*JavaVersion\.VERSION_11\.toString\(\)[^}]*\}',
-                      new,
-                      text,
-                      flags=re.MULTILINE
+          # Add the correct Kotlin compilerOptions block
+          block = '''
+          kotlin {
+              compilerOptions {
+                  jvmTarget.set(
+                      org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
                   )
+              }
+          }
+          '''
 
-                  file.write_text(text)
-                  print("Kotlin JVM target fixed with fallback.")
-              else:
-                  print("No kotlinOptions block found. Nothing to replace.")
+          text = text.rstrip() + "\n\n" + block
+
+          path.write_text(text)
+
+          print("Kotlin JVM target fixed.")
           PY
 
-          echo "===== android/app/build.gradle.kts ====="
+          echo "===== FINAL build.gradle.kts ====="
           cat android/app/build.gradle.kts
-          echo "========================================"
+          echo "==================================="
 
       - name: Flutter Pub Get
         run: |
