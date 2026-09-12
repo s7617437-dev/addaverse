@@ -30,20 +30,46 @@ jobs:
           from pathlib import Path
           import re
 
-          file = Path("android/settings.gradle")
-          text = file.read_text()
+          android = Path("android")
 
-          text = re.sub(
-              r'(id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'])[^"\']+(["\'])',
-              r'\g<1>2.3.20\g<2>',
+          candidates = [
+              android / "settings.gradle",
+              android / "settings.gradle.kts"
+          ]
+
+          settings = next((p for p in candidates if p.exists()), None)
+
+          if settings is None:
+              print("Android settings file not found.")
+              print("Files inside android:")
+              for p in android.rglob("*"):
+                  print(p)
+              raise SystemExit(1)
+
+          print("Using:", settings)
+
+          text = settings.read_text()
+
+          pattern = r'(org\.jetbrains\.kotlin\.android.*?version\s*["\'])([^"\']+)(["\'])'
+
+          new_text, count = re.subn(
+              pattern,
+              r'\g<1>2.3.20\g<3>',
               text
           )
 
-          file.write_text(text)
-          print("Kotlin version set to 2.3.20")
+          if count == 0:
+              print("Kotlin plugin line was not found.")
+              print(text)
+              raise SystemExit(1)
+
+          settings.write_text(new_text)
+
+          print("Kotlin upgraded to 2.3.20")
           PY
 
-          grep "org.jetbrains.kotlin.android" android/settings.gradle
+          echo "Kotlin configuration:"
+          grep -R "org.jetbrains.kotlin.android" android/settings.gradle android/settings.gradle.kts 2>/dev/null || true
 
       - name: Get dependencies
         run: flutter pub get
