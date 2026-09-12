@@ -37,40 +37,66 @@ jobs:
             --org com.avyra.app \
             .
 
-      - name: Show Android Configuration
+      - name: Upgrade Kotlin Gradle Plugin
         run: |
-          echo "===== SETTINGS FILE ====="
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          candidates = [
+              Path("android/settings.gradle"),
+              Path("android/settings.gradle.kts")
+          ]
+
+          settings = next((p for p in candidates if p.exists()), None)
+
+          if settings is None:
+              print("ERROR: settings.gradle or settings.gradle.kts not found")
+              exit(1)
+
+          print("Using settings file:", settings)
+
+          text = settings.read_text()
+
+          pattern = (
+              r'(id\s+["\']org\.jetbrains\.kotlin\.android'
+              r'["\']\s+version\s+["\'])'
+              r'[^"\']+'
+              r'(["\'])'
+          )
+
+          match = re.search(pattern, text)
+
+          if not match:
+              print("ERROR: Kotlin Gradle Plugin entry not found")
+              print(text)
+              exit(1)
+
+          print("Old Kotlin plugin:")
+          print(match.group(0))
+
+          text = re.sub(
+              pattern,
+              r'\g<1>2.3.20\g<2>',
+              text
+          )
+
+          settings.write_text(text)
+
+          print("Kotlin Gradle Plugin updated to 2.3.20")
+          PY
+
+      - name: Verify Kotlin Version
+        run: |
+          echo "===== Kotlin Gradle Plugin ====="
 
           if [ -f android/settings.gradle ]; then
-            echo "FILE: android/settings.gradle"
-            cat android/settings.gradle
-          elif [ -f android/settings.gradle.kts ]; then
-            echo "FILE: android/settings.gradle.kts"
-            cat android/settings.gradle.kts
-          else
-            echo "ERROR: Android settings file not found"
-            exit 1
+            grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
           fi
 
-          echo ""
-          echo "===== KOTLIN PLUGIN ====="
-
-          grep -Rni \
-            "org.jetbrains.kotlin.android" \
-            android \
-            --include="*.gradle" \
-            --include="*.gradle.kts" \
-            || true
-
-          echo ""
-          echo "===== GRADLE VERSIONS ====="
-
-          grep -Rni \
-            "com.android.application" \
-            android \
-            --include="*.gradle" \
-            --include="*.gradle.kts" \
-            || true
+          if [ -f android/settings.gradle.kts ]; then
+            grep -n "org.jetbrains.kotlin.android" android/settings.gradle.kts || true
+          fi
 
       - name: Flutter Pub Get
         run: |
