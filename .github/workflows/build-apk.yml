@@ -25,27 +25,21 @@ jobs:
           rm -rf android
           flutter create --platforms=android --android-language kotlin .
 
-      - name: Find and upgrade Kotlin
+      - name: Upgrade Kotlin
         run: |
           SETTINGS=$(find android -type f \( -name "settings.gradle" -o -name "settings.gradle.kts" \) | head -n 1)
 
-          echo "Settings file found:"
-          echo "$SETTINGS"
+          echo "Settings file: $SETTINGS"
 
           if [ -z "$SETTINGS" ]; then
-            echo "ERROR: Gradle settings file not found"
-            find android -maxdepth 3 -type f
+            echo "ERROR: settings file not found"
             exit 1
           fi
 
-          if [[ "$SETTINGS" == *.kts ]]; then
-            sed -i 's/org.jetbrains.kotlin.android.*version.*$/id("org.jetbrains.kotlin.android") version("2.3.20") apply false/' "$SETTINGS"
-          else
-            sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "2.3.20"/' "$SETTINGS"
-          fi
+          sed -i '/org.jetbrains.kotlin.android/s/version "[^"]*"/version "2.3.20"/' "$SETTINGS"
 
           echo "Kotlin configuration:"
-          grep -R "org.jetbrains.kotlin.android" android || true
+          grep "org.jetbrains.kotlin.android" "$SETTINGS"
 
       - name: Get dependencies
         run: flutter pub get
