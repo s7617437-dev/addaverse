@@ -20,22 +20,18 @@ jobs:
           flutter-version: '3.35.0'
           channel: stable
 
-      - name: Create fresh Android project
+      - name: Create Android project
         run: |
           rm -rf android
           flutter create --platforms=android --android-language kotlin .
 
       - name: Upgrade Kotlin
         run: |
-          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "2.3.20"/' android/settings.gradle
+          sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "2.3.20"/' android/settings.gradle
 
-          echo "Kotlin version:"
-          grep "org.jetbrains.kotlin.android" android/settings.gradle
-
-      - name: Configure Java 17
+      - name: Fix Java target
         run: |
           sed -i 's/JavaVersion.VERSION_11/JavaVersion.VERSION_17/g' android/app/build.gradle
-          sed -i 's/jvmTarget = JavaVersion.VERSION_17.toString()/jvmTarget = JavaVersion.VERSION_17.toString()/g' android/app/build.gradle
 
       - name: Get dependencies
         run: flutter pub get
@@ -44,4 +40,7 @@ jobs:
         run: flutter build apk --debug
 
       - name: Upload APK
-        uses:
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
