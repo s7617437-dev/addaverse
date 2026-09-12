@@ -33,7 +33,32 @@ jobs:
           flutter create \
             --platforms=android \
             --android-language kotlin \
+            --org com.avyra.app \
             .
+
+      - name: Fix Kotlin Version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("android/settings.gradle")
+          if p.exists():
+              s = p.read_text()
+              s = s.replace(
+                  "id 'org.jetbrains.kotlin.android' version '2.1.20'",
+                  "id 'org.jetbrains.kotlin.android' version '2.1.20'"
+              )
+              p.write_text(s)
+
+          p = Path("android/settings.gradle.kts")
+          if p.exists():
+              s = p.read_text()
+              s = s.replace(
+                  'id("org.jetbrains.kotlin.android") version "2.1.20"',
+                  'id("org.jetbrains.kotlin.android") version "2.1.20"'
+              )
+              p.write_text(s)
+          PY
 
       - name: Flutter Pub Get
         run: |
