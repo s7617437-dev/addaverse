@@ -25,59 +25,90 @@ jobs:
           rm -rf android
           flutter create --platforms=android --android-language kotlin .
 
-      - name: Fix Kotlin JVM Target
+      - name: Fix Android Kotlin Configuration
         run: |
-          APP_GRADLE="android/app/build.gradle.kts"
-
-          echo "Checking: $APP_GRADLE"
-
-          if [ ! -f "$APP_GRADLE" ]; then
-            echo "ERROR: build.gradle.kts not found"
-            exit 1
-          fi
-
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          path = Path("android/app/build.gradle.kts")
-          text = path.read_text()
+          settings = Path("android/settings.gradle.kts")
+          app = Path("android/app/build.gradle.kts")
+          root = Path("android/build.gradle.kts")
 
-          # Remove old kotlinOptions block
-          text = re.sub(
-              r'(?ms)^\s*kotlinOptions\s*\{.*?^\s*\}',
-              '',
-              text
-          )
+          # ------------------------------------------------
+          # settings.gradle.kts
+          # ------------------------------------------------
+          if settings.exists():
+              text = settings.read_text()
 
-          # Remove an incorrectly inserted compilerOptions block
-          text = re.sub(
-              r'(?ms)^\s*compilerOptions\s*\{.*?^\s*\}',
-              '',
-              text
-          )
+              text = re.sub(
+                  r'id\("org\.jetbrains\.kotlin\.android"\)\s*version\s*"[^"]+"',
+                  'id("org.jetbrains.kotlin.android") version "2.1.20"',
+                  text
+              )
 
-          # Add the correct Kotlin compilerOptions block
-          block = '''
+              settings.write_text(text)
+
+          # ------------------------------------------------
+          # app/build.gradle.kts
+          # ------------------------------------------------
+          if app.exists():
+              text = app.read_text()
+
+              # Remove old kotlinOptions
+              text = re.sub(
+                  r'(?ms)^\s*kotlinOptions\s*\{.*?^\s*\}',
+                  '',
+                  text
+              )
+
+              # Remove old standalone compilerOptions
+              text = re.sub(
+                  r'(?ms)^\s*compilerOptions\s*\{.*?^\s*\}',
+                  '',
+                  text
+              )
+
+              # Remove previously added kotlin block
+              text = re.sub(
+                  r'(?ms)^\s*kotlin\s*\{\s*compilerOptions\s*\{.*?\}\s*\}',
+                  '',
+                  text
+              )
+
+              # Add correct Kotlin configuration
+              text = text.rstrip() + '''
+
           kotlin {
+              jvmToolchain(17)
+
               compilerOptions {
                   jvmTarget.set(
-                      org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+                      org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
                   )
               }
           }
           '''
 
-          text = text.rstrip() + "\n\n" + block
+              app.write_text(text)
 
-          path.write_text(text)
+          # ------------------------------------------------
+          # root build.gradle.kts
+          # ------------------------------------------------
+          if root.exists():
+              text = root.read_text()
 
-          print("Kotlin JVM target fixed.")
+              # Remove old Kotlin version declarations
+              text = re.sub(
+                  r'kotlin_version\s*=\s*"[^"]+"',
+                  'kotlin_version = "2.1.20"',
+                  text
+              )
+
+              root.write_text(text)
+
+          print("Android Kotlin configuration fixed.")
           PY
-
-          echo "===== FINAL build.gradle.kts ====="
-          cat android/app/build.gradle.kts
-          echo "==================================="
 
       - name: Flutter Pub Get
         run: |
