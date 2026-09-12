@@ -24,61 +24,35 @@ jobs:
         run: |
           flutter create --platforms=android .
 
-      - name: Upgrade Kotlin
+      - name: Configure Kotlin and Java
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          android = Path("android")
-
-          candidates = [
-              android / "settings.gradle",
-              android / "settings.gradle.kts"
-          ]
-
-          settings = next((p for p in candidates if p.exists()), None)
-
-          if settings is None:
-              print("Android settings file not found.")
-              print("Files inside android:")
-              for p in android.rglob("*"):
-                  print(p)
-              raise SystemExit(1)
-
-          print("Using:", settings)
-
+          settings = Path("android/settings.gradle")
           text = settings.read_text()
 
-          pattern = r'(org\.jetbrains\.kotlin\.android.*?version\s*["\'])([^"\']+)(["\'])'
-
-          new_text, count = re.subn(
-              pattern,
-              r'\g<1>2.3.20\g<3>',
+          text = re.sub(
+              r'(org\.jetbrains\.kotlin\.android["\']?\s+version\s+["\'])[^"\']+(["\'])',
+              r'\g<1>2.3.20\g<2>',
               text
           )
 
-          if count == 0:
-              print("Kotlin plugin line was not found.")
-              print(text)
-              raise SystemExit(1)
+          settings.write_text(text)
 
-          settings.write_text(new_text)
+          app = Path("android/app/build.gradle")
+          text = app.read_text()
 
-          print("Kotlin upgraded to 2.3.20")
-          PY
+          text = text.replace(
+              'JavaVersion.VERSION_11',
+              'JavaVersion.VERSION_17'
+          )
 
-          echo "Kotlin configuration:"
-          grep -R "org.jetbrains.kotlin.android" android/settings.gradle android/settings.gradle.kts 2>/dev/null || true
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --debug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          text = re.sub(
+              r'kotlinOptions\s*\{\s*jvmTarget\s*=\s*JavaVersion\.VERSION_17\.toString\s*\}',
+              '''kotlin {
+                  compilerOptions {
+                      jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+                  }
+             
