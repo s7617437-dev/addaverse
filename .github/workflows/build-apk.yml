@@ -30,35 +30,23 @@ jobs:
       - name: Recreate Android Project
         run: |
           rm -rf android
+
           flutter create \
             --platforms=android \
             --android-language kotlin \
             --org com.avyra.app \
             .
 
-      - name: Fix Kotlin Version
+      - name: Check Android Gradle Configuration
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
+          echo "===== settings.gradle ====="
+          cat android/settings.gradle || true
 
-          p = Path("android/settings.gradle")
-          if p.exists():
-              s = p.read_text()
-              s = s.replace(
-                  "id 'org.jetbrains.kotlin.android' version '2.1.20'",
-                  "id 'org.jetbrains.kotlin.android' version '2.1.20'"
-              )
-              p.write_text(s)
+          echo "===== settings.gradle.kts ====="
+          cat android/settings.gradle.kts || true
 
-          p = Path("android/settings.gradle.kts")
-          if p.exists():
-              s = p.read_text()
-              s = s.replace(
-                  'id("org.jetbrains.kotlin.android") version "2.1.20"',
-                  'id("org.jetbrains.kotlin.android") version "2.1.20"'
-              )
-              p.write_text(s)
-          PY
+          echo "===== gradle.properties ====="
+          cat android/gradle.properties || true
 
       - name: Flutter Pub Get
         run: |
@@ -71,9 +59,10 @@ jobs:
 
       - name: Build APK
         run: |
-          flutter build apk --debug
+          flutter build apk --debug --verbose
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
