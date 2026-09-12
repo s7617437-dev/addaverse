@@ -37,51 +37,59 @@ jobs:
             --org com.avyra.app \
             .
 
+      - name: Check Android Project
+        run: |
+          echo "===== Android files ====="
+          find android -maxdepth 2 -type f | sort
+
+          echo "===== Settings file ====="
+
+          if [ -f android/settings.gradle.kts ]; then
+            echo "Found: android/settings.gradle.kts"
+            cat android/settings.gradle.kts
+          elif [ -f android/settings.gradle ]; then
+            echo "Found: android/settings.gradle"
+            cat android/settings.gradle
+          else
+            echo "ERROR: No settings.gradle or settings.gradle.kts found"
+            exit 1
+          fi
+
       - name: Upgrade Kotlin Gradle Plugin
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          p = Path("android/settings.gradle")
+          files = [
+              Path("android/settings.gradle"),
+              Path("android/settings.gradle.kts")
+          ]
 
-          if not p.exists():
-              print("ERROR: android/settings.gradle not found")
+          settings = next((p for p in files if p.exists()), None)
+
+          if settings is None:
+              print("ERROR: settings.gradle or settings.gradle.kts not found")
               exit(1)
 
-          s = p.read_text()
+          print("Using:", settings)
 
-          old = re.search(
-              r'id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'][^"\']+["\']',
-              s
-          )
+          s = settings.read_text()
 
-          if old:
-              print("Old Kotlin plugin:")
-              print(old.group(0))
+          pattern = r'(org\.jetbrains\.kotlin\.android["\']?\s+version\s+["\'])[^"\']+(["\'])'
 
+          if re.search(pattern, s):
               s = re.sub(
-                  r'(id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'])[^"\']+(["\'])',
+                  pattern,
                   r'\g<1>2.1.20\g<2>',
                   s
               )
-
-              p.write_text(s)
-
-              print("Updated Kotlin plugin to 2.1.20")
+              settings.write_text(s)
+              print("Kotlin Gradle Plugin updated to 2.1.20")
           else:
-              print("ERROR: Kotlin plugin entry not found")
-              print(s)
-              exit(1)
+              print("Kotlin plugin version pattern not found.")
+              print("Keeping Flutter generated Kotlin configuration.")
           PY
-
-      - name: Show Android Configuration
-        run: |
-          echo "===== Kotlin Plugin ====="
-          grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
-
-          echo "===== Android Settings ====="
-          cat android/settings.gradle
 
       - name: Flutter Pub Get
         run: |
