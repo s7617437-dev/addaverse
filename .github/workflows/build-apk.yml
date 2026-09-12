@@ -30,142 +30,34 @@ jobs:
       - name: Recreate Android Project
         run: |
           rm -rf android
-
           flutter create \
             --platforms=android \
             --android-language kotlin \
             --org com.avyra.app \
             .
 
-      - name: Upgrade Kotlin Gradle Plugin
+      - name: Update Kotlin Plugin
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
+          sed -i 's/version "2.1.0" apply false/version "2.3.20" apply false/' android/settings.gradle.kts
 
-          files = [
-              Path("android/settings.gradle"),
-              Path("android/settings.gradle.kts")
-          ]
+          echo "===== Kotlin Plugin ====="
+          grep -n "org.jetbrains.kotlin.android" android/settings.gradle.kts
 
-          settings = next((p for p in files if p.exists()), None)
-
-          if settings is None:
-              print("ERROR: Android settings file not found")
-              exit(1)
-
-          text = settings.read_text()
-
-          patterns = [
-              r'(id\(["\']org\.jetbrains\.kotlin\.android["\']\)\s+version\s+["\'])[^"\']+(["\'])',
-              r'(id\s+["\']org\.jetbrains\.kotlin\.android["\']\s+version\s+["\'])[^"\']+(["\'])'
-          ]
-
-          changed = False
-
-          for pattern in patterns:
-              new_text = re.sub(
-                  pattern,
-                  r'\g<1>2.3.20\g<2>',
-                  text
-              )
-
-              if new_text != text:
-                  text = new_text
-                  changed = True
-
-          if not changed:
-              print("ERROR: Kotlin plugin entry not found")
-              print(text)
-              exit(1)
-
-          settings.write_text(text)
-
-          print("Kotlin Gradle Plugin = 2.3.20")
-          PY
-
-      - name: Fix Kotlin JVM Target
+      - name: Fix JVM Target
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
+          sed -i '/kotlinOptions[[:space:]]*{/,/^[[:space:]]*}/d' android/app/build.gradle.kts
 
-          gradle_files = list(Path("android").rglob("*.gradle.kts"))
-
-          print("Checking Kotlin Gradle files...")
-
-          for path in gradle_files:
-              text = path.read_text()
-
-              original = text
-
-              # Remove old kotlinOptions block
-              text = re.sub(
-                  r'\n\s*kotlinOptions\s*\{\s*'
-                  r'jvmTarget\s*=\s*JavaVersion\.VERSION_\d+\.toString\(\)\s*'
-                  r'\}',
-                  '',
-                  text
-              )
-
-              # Remove old jvmTarget String syntax if present
-              text = re.sub(
-                  r'\n\s*kotlinOptions\s*\{\s*'
-                  r'jvmTarget\s*=\s*["\'][^"\']+["\']\s*'
-                  r'\}',
-                  '',
-                  text
-              )
-
-              if text != original:
-                  path.write_text(text)
-                  print("Removed old kotlinOptions from:", path)
-
-          app = Path("android/app/build.gradle.kts")
-
-          if not app.exists():
-              print("ERROR: android/app/build.gradle.kts not found")
-              exit(1)
-
-          text = app.read_text()
-
-          # Add modern Kotlin compilerOptions
-          if "compilerOptions" not in text:
-              text += '''
+          cat >> android/app/build.gradle.kts <<'EOF'
 
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
-'''
+EOF
 
-          app.write_text(text)
-
-          print("Modern Kotlin compilerOptions configured.")
-          PY
-
-      - name: Verify Android Configuration
-        run: |
-          echo "===== KOTLIN PLUGIN ====="
-
-          if [ -f android/settings.gradle.kts ]; then
-            grep -n "org.jetbrains.kotlin.android" android/settings.gradle.kts || true
-          fi
-
-          if [ -f android/settings.gradle ]; then
-            grep -n "org.jetbrains.kotlin.android" android/settings.gradle || true
-          fi
-
-          echo ""
           echo "===== JVM TARGET ====="
-
-          grep -Rni \
-            "jvmTarget\|compilerOptions\|kotlinOptions" \
-            android \
-            --include="*.gradle" \
-            --include="*.gradle.kts" \
-            || true
+          tail -15 android/app/build.gradle.kts
 
       - name: Flutter Pub Get
         run: |
